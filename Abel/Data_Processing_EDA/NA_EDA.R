@@ -37,11 +37,24 @@ cut_5 <- function(x){
   return(unlist(y))
 }
 
+# Links / http: allen-p\\all_documents\\1, buy-r\\inbox\\159
+Links  = mails %>% filter(body %like% "%http%")
 
-# IMAGE: allen-p\\all_documents\\17, 259
+# Labeling: FP = 0
+set.seed(123)
+l = Links %>% sample_n(50) %>% pull(message_id)
+Links %>% filter(message_id == l[1]) %>% pull(body)
+
+# IMAGE: allen-p\\all_documents\\17, 259, 354, 355, 357
+# png: allen-p\\all_documents\\469, 473
 Image = mails %>% filter(body %like% "%IMAGE%")
 Image = Image %>% mutate(subject_5 = cut_5(subject))
 Image$main_folder = sapply(strsplit(Image$message_id, "\\\\"), function(x) x[1] )
+
+# Labeling: FP = 0
+set.seed(123)
+i = Image %>% sample_n(50) %>% pull(message_id)
+Image %>% filter( message_id == i[1] ) %>% pull(body)
 
 par(mar=c(10,5,3,3))
 (table(Image$subject_5) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.5,
@@ -63,6 +76,7 @@ par(mar=c(10,5,3,3))
 par(mar=c(6,5,3,3))
 (table(Table$main_folder) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.7, las=2, ylab = "emails",
                                                                       main="Top 10 Users in Table emails")
+
 
 #################
 # Vanilla LDA  ##

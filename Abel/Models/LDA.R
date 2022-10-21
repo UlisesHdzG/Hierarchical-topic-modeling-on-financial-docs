@@ -7,20 +7,23 @@ library(tidytext)
 library(stopwords)
 library(topicmodels)
 library(ggplot2)
+library(DescTools)
 
 # Data comes from 'Cleaning.ipynb'
-mails = read.csv("C:/Users/apere/Desktop/Data_Capstone/data_splited_nonstopwrods.csv", stringsAsFactors = F)
+# mails = read.csv("C:/Users/apere/Desktop/Data_Capstone/data_splited_nonstopwrods.csv", stringsAsFactors = F)
+mails = read.csv("C:/Users/apere/Desktop/Data_Capstone/data_splited_nonstopwrods_http2.csv", stringsAsFactors = F)
+colnames(mails)[colnames(mails)=="email_id"] = "message_id"
 
 set.seed(123)
-words_in = mails %>% dplyr::sample_n(10000) %>% dplyr::select(message_id, clean_body) %>%
+words_in = mails %>% dplyr::sample_n(1000) %>% dplyr::select(message_id, clean_body) %>%
   unnest_tokens(word, clean_body) %>% count(message_id, word) %>% cast_dfm(message_id, word, n)
+words_in = words_in[,!colnames(words_in) %like% "%aaa%"]# remove trash tokens
 
-words_out = mails %>% filter(! message_id %in% words_in$message_id) %>% dplyr::sample_n(10000) %>%
+words_out = mails %>% filter(! message_id %in% words_in$message_id) %>% dplyr::sample_frac(0.25) %>%
   dplyr::select(message_id, clean_body) %>% unnest_tokens(word, clean_body) %>%
   group_by(word) %>% summarise( n=length(message_id))
 
-words_out = words_out[, colnames(words_out)[colnames(words_out) %in% colnames(words_in)]]
-words_out = sapply(words_out, sum)
+words_out = words_out %>% filter(word %in% colnames(words_in) )
 
 # LDA log-mrginal likelihood (marginalized over latent indicators and documents)
 # return pseudo log predictive likelihood over test set 'words_out', using estimated parameters
@@ -42,7 +45,7 @@ log_LDA(words_out, B)
 
 # Grid
 set.seed(1234)
-grid = data.frame( k = c(2, 5, 10, 15, 20, 30, 50), log_pred = NA  )
+grid = data.frame( k = c(2, 5, 10, 15, 20, 25, 30, 40), log_pred = NA  )
 inicio = Sys.time()
 for(i in 1:length(grid$k) ){
   cappa = grid$k[i]
@@ -56,17 +59,51 @@ for(i in 1:length(grid$k) ){
 }
 fin = Sys.time()
 fin - inicio
+plot(ts(grid$log_pred))
+
+logs_p = grid$log_pred
+logs_p[1] = (logs_p[2] + logs_p[5])/2
+
+plot(ts(logs_p), xaxt = 'n', xlab = 'k', ylab = 'Lambda(k)' )
+axis(1, at = 1:8, labels = c(2, 5, 10, 15, 20, 25, 30, 40) )
+points(1:8,logs_p )
+
 
 LDA_opt = LDA(words_in, k=15, control = list(seed=123))
-save(LDA_opt, file="LDA_sample_opt.RData")
+save(LDA_opt, file="LDA_sample_clean_opt.RData")
+load("LDA_sample_clean_opt.RData")
 
 # Topics Visualization
 tidy(LDA_opt, matrix = "beta") %>% group_by(topic) %>%
-  slice_max(beta, n = 15) %>% ungroup() %>%
+  slice_max(beta, n = 10) %>% ungroup() %>%
   arrange(topic, -beta) %>% mutate(term = reorder_within(term, beta, topic)) %>%
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~ topic, scales = "free") +
   scale_y_reordered()
 
+# Mails topic proportion Visualization
+tidy(LDA_opt, matrix = "gamma") %>% filter(topic==6) %>% arrange(desc(gamma)) %>% head(10)
 
+# document                             topic gamma
+# <chr>                                <int> <dbl>
+#   1 "martin-t\\deleted_items\\79#1"         10  1.00
+# 2 "dasovich-j\\all_documents\\11276#1"    13  1.00
+# 3 "martin-t\\inbox\\6#1"                  10  1.00
+# 4 "kitchen-l\\_americas\\esvl\\747#1"     10  1.00
+# 5 "staab-t\\inbox\\112#1"                  5  1.00
+# 6 "dasovich-j\\all_documents\\2310#1"     14  1.00
+# 7 "grigsby-m\\deleted_items\\194#1"        5  1.00
+# 8 "dasovich-j\\all_documents\\1326#1"     14  1.00
+# 9 "cuilla-m\\deleted_items\\387#1"         5  1.00
+# 10 "lucci-p\\deleted_items\\592#1"          3  1.00
+
+# 10: Negative and scandal Enron emails (79)
+# 13: Energy market (11276)
+# 3: Fantasy league ads (592)
+# 14: Enterprise financing news (2310)
+
+# 10: Overall scandall and concequences to employees (martin-t\\deleted_items\\79#1)
+# 13: Energy price manipulation (dasovich-j\\all_documents\\11276#1)
+# 3: Fantasy league ads (lucci-p\\deleted_items\\592#1)
+# 14: Enterprise financing news (dasovich-j\\all_documents\\2310#1)

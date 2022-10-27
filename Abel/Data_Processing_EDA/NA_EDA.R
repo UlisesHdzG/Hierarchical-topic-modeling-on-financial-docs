@@ -64,55 +64,6 @@ par(mar=c(6,5,3,3))
 (table(Image$main_folder) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.7, las=2, ylab="emails",
                                                                       main="Top 10 Users in Image emails")
 
-
-# Table: allen-p\\all_documents\\10, 359
-Table = mails %>% filter(body %like% "%Table%")
-Table = Table %>% mutate(subject_5 = cut_5(subject))
-Table$main_folder = sapply(strsplit(Table$message_id, "\\\\"), function(x) x[1] )
-
-par(mar=c(10,5,3,3))
-(table(Table$subject_5) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.5, las=2, ylab="emails",
-                                                                    main="Top 10 Subjects in Table emails (928 total)")
-par(mar=c(6,5,3,3))
-(table(Table$main_folder) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.7, las=2, ylab = "emails",
-                                                                      main="Top 10 Users in Table emails")
-
-
-#################
-# Vanilla LDA  ##
-#################
-
-library(tidytext)
-library(stopwords)
-library(topicmodels)
-library(ggplot2)
-
-mails$body = tolower(mails$body)
-
-# Remove stop words from bodies
-non_stop_words = function(x){
-  list = strsplit(x, " ")
-  stop_w = stopwords("english")
-  
-  y = sapply(list, function(x){
-    aux = x[! x %in% stop_w]
-    return(paste(aux, collapse=" "))
-  })
-  
-  return(y)
-}
-
-mails$body_clean = non_stop_words(mails$body)
-write.csv(mails, file="complete_data_processed.csv", row.names = F)
-mails = read.csv("complete_data_processed.csv", stringsAsFactors = F)
-
-set.seed(123)
-mails_words = mails %>% dplyr::sample_n(10000) %>% dplyr::select(message_id, body_clean) %>% unnest_tokens(word, body_clean) %>% 
-  count(message_id, word) %>% cast_dfm(message_id, word, n)
-  
-# Vanilla LDA
-LDA_0 = LDA(mails_words, k=5, control = list(seed=123)) 
-
 # Topics
 tidy(LDA_0, matrix = "beta") %>% group_by(topic) %>%
   slice_max(beta, n = 10) %>% ungroup() %>%

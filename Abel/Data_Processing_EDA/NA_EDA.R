@@ -64,12 +64,17 @@ par(mar=c(6,5,3,3))
 (table(Image$main_folder) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.7, las=2, ylab="emails",
                                                                       main="Top 10 Users in Image emails")
 
-# Topics
-tidy(LDA_0, matrix = "beta") %>% group_by(topic) %>%
-  slice_max(beta, n = 10) %>% ungroup() %>%
-  arrange(topic, -beta) %>% mutate(term = reorder_within(term, beta, topic)) %>%
-  ggplot(aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ topic, scales = "free") +
-  scale_y_reordered()
+
+# Table: allen-p\\all_documents\\10, 359
+Table = mails %>% filter(body %like% "%Table%")
+Table = Table %>% mutate(subject_5 = cut_5(subject))
+Table$main_folder = sapply(strsplit(Table$message_id, "\\\\"), function(x) x[1] )
+
+par(mar=c(10,5,3,3))
+(table(Table$subject_5) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.5, las=2, ylab="emails",
+                                                                    main="Top 10 Subjects in Table emails (928 total)")
+par(mar=c(6,5,3,3))
+(table(Table$main_folder) %>% sort(decreasing = T))[1:10] %>% barplot(cex.names=0.7, las=2, ylab = "emails",
+                                                                      main="Top 10 Users in Table emails")
+
 

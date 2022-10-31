@@ -1,4 +1,7 @@
-# Hierarchical Topic Modeling over Financial Documents
-
-Hierarchical topic modeling is a potentially powerful instrument for determining topical structures of text collections that additionally allows constructing a hierarchy representing the levels of topic abstractness. However, parameter optimization in hierarchical models, which includes finding an appropriate number of topics at each level of hierarchy, is a challenging task. Hence in this project, the team will work on exploring unsupervised learning techniques to analyze textual data, specifically emails, and generate hierarchical topics and clusters to determine the intent of the emails. The team will also work on how to generate visual representations of these generated hierarchical clusters and topics and perform evaluation on them.
-
+# Github-lab
+Github lab session
+Test of modification - GG  
+Test from Yunchen
+Test From Abel
+OK, we are ready
+Test from xinyu

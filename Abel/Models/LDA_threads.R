@@ -35,7 +35,8 @@ ids$n %>% summary
 ( ids %>% filter(message_id %in% s, n>1) )$n %>% summary
 
 # Sample data
-mails_s = mails %>% filter(message %in% s)
+mails_s = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/new_data_cleaned_sample.csv", stringsAsFactors = F)
+# mails_s = mails %>% filter(message %in% s)
 remove(mails); gc()
 
 words_in = mails_s %>% dplyr::select(message_id, clean_body) %>%
@@ -50,14 +51,30 @@ fin - inicio
 save(mod, file="LDA_threads.RData")
 load("LDA_threads.RData")
 
+load("LDA_5.RData")
+mod=LDA_opt
+remove(LDA_opt); gc()
+
 # Topics visualization
-tidy(mod, matrix = "beta") %>% group_by(topic) %>%
-  slice_max(beta, n = 10) %>% ungroup() %>%
-  arrange(topic, -beta) %>% mutate(term = reorder_within(term, beta, topic)) %>%
-  ggplot(aes(beta, term, fill = factor(topic))) +
+
+B = tidy(mod, matrix = "beta") 
+B$Topic = B$topic
+B$Topic[B$topic == 1] = "1 Enron News"
+B$Topic[B$topic == 2] = "2 Market News"
+B$Topic[B$topic == 3] = "3 Disclaimers"
+B$Topic[B$topic == 4] = "4 Setting up Meetings"
+B$Topic[B$topic == 5] = "5 Energy Markets"
+B$Topic[B$topic == 6] = "6 Operational"
+B$Topic[B$topic == 7] = "7 Chatting"
+B$Topic = factor(B$Topic)
+
+B %>% group_by(Topic) %>%
+  slice_max(beta, n = 15) %>% ungroup() %>%
+  arrange(Topic, -beta) %>% mutate(term = reorder_within(term, beta, Topic)) %>%
+  ggplot(aes(beta, term, fill = Topic )) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(~ topic, scales = "free") +
-  scale_y_reordered()
+  facet_wrap(~ Topic, scales = "free") +
+  scale_y_reordered() + labs(x="P(Term | Topic)", y="Term") 
 
 # Topic labeling
 tidy(mod, matrix = "gamma") %>% filter(topic == 1) %>% arrange(desc(gamma))
@@ -71,9 +88,38 @@ plot_props = function(x){
   ggplot(x, aes(x=id, y=gamma, colour=factor(topic), group=factor(topic) )) + #geom_line() +
     stat_smooth(method = "loess", formula = y ~ x, size = 1,
                 method.args = list(degree=1)) + labs(y="Proportion", x = "Thread number") +
-    ggtitle("Smoothed Average Proportions" )
+    ggtitle("Smoothed Average Proportions" ) + labs(color="Topic") 
+    # scale_colour_manual(labels =c("#F8766D", "#C59900", "#5BB300",
+    #                             "#F8766D", "#F8766D", "#F8766D",
+    #                             "#F8766D"),
+    #                    values = c('Enron News'="#F8766D",'Market News'="#C59900", "Disclaimers"="#5BB300",
+    #                               "Setting up Meetings"="#F8766D",
+    #                               "Energy Markets"="#F8766D", "Operational"="#F8766D",
+    #                               "Chatting"="#F8766D"))
+}
+plot_props2 = function(x){
+  ggplot(x, aes(x=id, y=gamma, colour=Topic, group=Topic )) + #geom_line() +
+    stat_smooth(method = "loess", formula = y ~ x, size = 1,
+                method.args = list(degree=1)) + labs(y="Proportion", x = "Thread number") +
+    ggtitle("Smoothed Average Proportions" ) + labs(color="Topic") 
+  # scale_colour_manual(labels =c("#F8766D", "#C59900", "#5BB300",
+  #                             "#F8766D", "#F8766D", "#F8766D",
+  #                             "#F8766D"),
+  #                    values = c('Enron News'="#F8766D",'Market News'="#C59900", "Disclaimers"="#5BB300",
+  #                               "Setting up Meetings"="#F8766D",
+  #                               "Energy Markets"="#F8766D", "Operational"="#F8766D",
+  #                               "Chatting"="#F8766D"))
 }
 # props %>% filter(doc==ms[2]) %>% plot_props()
+props$Topic = props$topic
+props$Topic[props$Topic == 1] = "1 Enron News"
+props$Topic[props$Topic == 2] = "2 Market News"
+props$Topic[props$Topic == 3] = "3 Disclaimers"
+props$Topic[props$Topic == 4] = "4 Setting up Meetings"
+props$Topic[props$Topic == 5] = "5 Energy Markets"
+props$Topic[props$Topic == 6] = "6 Operational"
+props$Topic[props$Topic == 7] = "7 Chatting"
+props$Topic = factor(props$Topic)
 props %>% group_by(id, topic) %>% summarise(gamma = mean(gamma)) %>% plot_props()
-
+props %>% group_by(id, Topic) %>% summarise(gamma = mean(gamma)) %>% plot_props2()
 

@@ -13,15 +13,21 @@ library(DescTools)
 # mails = read.csv("C:/Users/apere/Desktop/Data_Capstone/data_splited_nonstopwrods.csv", stringsAsFactors = F)
 # mails = read.csv("C:/Users/apere/Desktop/Data_Capstone/data_splited_nonstopwrods_http2.csv", stringsAsFactors = F)
 # mails = read.csv("C:/Users/apere/Desktop/Data_Capstone/data_splited_3.csv", stringsAsFactors = F)
-mails = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/data_clean_processed_sample.csv", stringsAsFactors = F)
+# mails = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/data_clean_processed_sample.csv", stringsAsFactors = F)
+# mails = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/data_clean_processed_sample.csv", stringsAsFactors = F)
+
+mails = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/new_data_cleaned_sample.csv", stringsAsFactors = F)
+mails_30 = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/30_selected_samples.csv", stringsAsFactors = F)
+
 colnames(mails)[colnames(mails)=="email_id"] = "message_id"
 colnames(mails)[colnames(mails)=="bow"] = "clean_body"
 vocab = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/clean_vocab.csv", stringsAsFactors = F)
 
 words_in = mails %>% dplyr::select(message_id, clean_body) %>%
-  unnest_tokens(word, clean_body) %>% filter(word %in% vocab$term, !word %like% "%aaa%",
-                                             !word %in% c("imagemasker", "urlmasker")) %>%# Vocab filter 
-  count(message_id, word) %>% cast_dfm(message_id, word, n)
+  unnest_tokens(word, clean_body) %>% filter(word %in% vocab$term, !word %like% "%aaa%") %>%# Vocab filter 
+  count(message_id, word)
+words_in = words_in %>% cast_dtm( message_id, word, n )
+  #cast_dfm( message_id, word, n )
 
 remove(mails); gc()
 set.seed(123)
@@ -29,7 +35,7 @@ mails = read.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/C
 colnames(mails)[colnames(mails)=="email_id"] = "message_id"
 colnames(mails)[colnames(mails)=="bow"] = "clean_body"
 
-words_out = mails %>% filter(! message_id %in% rownames(words_in) ) %>% dplyr::sample_frac(0.5) %>%
+words_out = mails %>% filter(! message_id %in% rownames(words_in) ) %>%
   dplyr::select(message_id, clean_body) %>% unnest_tokens(word, clean_body) %>% filter(word %in% colnames(words_in) ) %>% 
   group_by(word) %>% summarise( n=length(message_id))
 
@@ -66,7 +72,7 @@ print(grid)
 logs_p = grid$log_pred
 logs_p[1] = (logs_p[2] + logs_p[5])/2
 plot(ts(logs_p), xaxt = 'n', xlab = 'k', ylab = 'Lambda(k)' )
-axis(1, at = 1:7, labels = c( 5, 10, 15, 20, 25, 30, 40) )
+axis(1, at = 1:7, labels = c( 5, 7, 10, 12, 15, 20, 25) )
 points(1:7,logs_p )
 
 
@@ -76,13 +82,13 @@ fin = Sys.time()
 fin - inicio
 # save(LDA_opt, file="LDA_sample_clean_opt.RData")
 # save(LDA_opt, file="LDA_3_opt.RData")
-save(LDA_opt, file="LDA_4_nomask.RData")
-load("LDA_4_nomask.RData")
+save(LDA_opt, file="LDA_5.RData")
+load("LDA_5.RData")
 
 
 # Topics Visualization
 tidy(LDA_opt, matrix = "beta") %>% group_by(topic) %>%
-  slice_max(beta, n = 10) %>% ungroup() %>%
+  slice_max(beta, n = 20) %>% ungroup() %>%
   arrange(topic, -beta) %>% mutate(term = reorder_within(term, beta, topic)) %>%
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
@@ -100,6 +106,18 @@ mails_class %>%
   write.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Models Comparison/LDA4_nomask_emails_assignments.csv",
             row.names = F)
 
+
+mails_30 %>% dplyr::select(-X) %>% left_join( transmute(mails_class,
+                                                     email_id=document,
+                                                     topic_LDA=topic,
+                                                     P_topic_LDA=gamma ) ) %>% 
+  write.csv("G:/.shortcut-targets-by-id/1pETyus-Qcj5yhAtbMb9lnWPa53WjHhHB/Capstone Project/Data/30_selected_samples_LDA.csv",
+            row.names = F)
+# 1: enron news
+# 2: energy market reports
+# 
+
+
 # Topics top 20 words:
 tidy(LDA_opt, matrix = "beta") %>% group_by(topic) %>%
   slice_max(beta, n = 100) %>% ungroup() %>%
@@ -108,8 +126,8 @@ tidy(LDA_opt, matrix = "beta") %>% group_by(topic) %>%
             row.names = F)
 
 table(mails_class$topic)/nrow(mails_class)
-mails_class %>% filter(topic==1) %>% arrange(desc(gamma)) %>% slice(1:15)
-mails %>% filter(message_id=="scott-s\\sent_items\\3#1") %>% select(clean_body) %>% pull
+mails_class %>% filter(topic==5) %>% arrange(desc(gamma)) %>% slice(1:15)
+mails %>% filter(email_id=="scott-s\\sent_items\\142#1") %>% select(bow) %>% pull
 
 # document                             topic gamma
 # <chr>                                <int> <dbl>
